@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brothers Ben Cafe | Petersham, NSW</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Outfit', 'sans-serif'],
+                        serif: ['"Playfair Display"', 'serif'],
+                    },
+                    colors: {
+                        'brand-dark': '#1a241f', /* Deep warm green/black */
+                        'brand-light': '#f9f6f0', /* Warm beige */
+                        'brand-accent': '#c96a4a', /* Terracotta/rust */
+                        'brand-sand': '#e8e1d5', /* Darker beige */
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.8s cubic-bezier(0.5, 0, 0, 1);
+        }
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .hero-bg {
+            background-image: linear-gradient(rgba(26, 36, 31, 0.7), rgba(26, 36, 31, 0.4)), url('https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=1920&q=80');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f9f6f0; }
+        ::-webkit-scrollbar-thumb { background: #c96a4a; border-radius: 4px; }
+        
+        /* Toast Notification */
+        #toast-container {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: none;
+        }
+        .custom-toast {
+            background-color: #1a241f;
+            color: #fff;
+            padding: 14px 24px;
+            border-radius: 50px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 14px;
+            font-weight: 500;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+        .custom-toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Cart Sidebar Transitions */
+        #cart-sidebar {
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        #cart-overlay {
+            transition: opacity 0.4s ease;
+        }
+        
+        /* Menu Tab Styles */
+        .menu-tab.active-tab {
+            background-color: #c96a4a;
+            color: white;
+            border-color: #c96a4a;
+        }
+        .menu-tab.inactive-tab {
+            background-color: transparent;
+            color: #f9f6f0;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .menu-tab.inactive-tab:hover {
+            border-color: rgba(255,255,255,0.6);
+        }
+        
+        /* Smooth hiding for menu items */
+        .menu-item {
+            transition: opacity 0.4s ease, transform 0.4s ease;
+        }
+        .menu-item.hidden {
+            display: none;
+            opacity: 0;
+            transform: scale(0.95);
+        }
+    </style>
+</head>
+<body class="font-sans bg-brand-light text-brand-dark antialiased selection:bg-brand-accent selection:text-white relative overflow-x-hidden">
+
+    <!-- Toast Container -->
+    <div id="toast-container"></div>
+
+    <!-- Navigation -->
+    <nav id="navbar" class="fixed w-full z-40 transition-all duration-300 py-5 text-white border-b border-white/10 bg-brand-dark/80 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-6 lg:px-12 flex justify-between items-center">
+            <a href="#" class="font-serif text-2xl md:text-3xl font-bold tracking-wide flex items-center gap-2">
+                Brothers Ben <span class="text-brand-accent text-4xl leading-none">.</span>
+            </a>
+            
+            <!-- Desktop Menu -->
+            <div class="hidden md:flex items-center space-x-8 text-sm font-medium tracking-wide uppercase">
+                <a href="#about" class="hover:text-brand-accent transition-colors">Story</a>
+                <a href="#order" class="hover:text-brand-accent transition-colors">Menu</a>
+                <a href="#gallery" class="hover:text-brand-accent transition-colors">Gallery</a>
+                <a href="#reservations" class="hover:text-brand-accent transition-colors">Book</a>
+                
+                <!-- Cart Button -->
+                <button onclick="toggleCart()" class="relative text-xl hover:text-brand-accent transition-colors ml-4 flex items-center cursor-pointer">
+                    <i class="fas fa-shopping-bag"></i>
+                    <span id="cart-badge" class="absolute -top-2 -right-2 bg-brand-accent text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full transition-opacity">0</span>
+                </button>
+            </div>
+
+            <!-- Mobile Controls -->
+            <div class="flex items-center gap-6 md:hidden">
+                <button onclick="toggleCart()" class="relative text-xl hover:text-brand-accent transition-colors cursor-pointer">
+                    <i class="fas fa-shopping-bag"></i>
+                    <span id="mobile-cart-badge" class="absolute -top-2 -right-2 bg-brand-accent text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full transition-opacity">0</span>
+                </button>
+                <button onclick="toggleMenu()" class="text-2xl focus:outline-none hover:text-brand-accent transition-colors cursor-pointer">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Mobile Menu Dropdown -->
+        <div id="mobile-menu" class="hidden absolute top-full left-0 w-full bg-brand-dark text-white shadow-2xl flex-col text-center uppercase tracking-widest text-sm py-4 border-t border-white/5">
+            <a href="#about" class="py-4 hover:text-brand-accent border-b border-white/5" onclick="toggleMenu()">Story</a>
+            <a href="#order" class="py-4 hover:text-brand-accent border-b border-white/5" onclick="toggleMenu()">Menu</a>
+            <a href="#gallery" class="py-4 hover:text-brand-accent border-b border-white/5" onclick="toggleMenu()">Gallery</a>
+            <a href="#reservations" class="py-4 hover:text-brand-accent" onclick="toggleMenu()">Book</a>
+        </div>
+    </nav>
+
+    <!-- Cart Sidebar -->
+    <div id="cart-overlay" class="fixed inset-0 bg-black/50 z-50 hidden opacity-0 backdrop-blur-sm transition-opacity" onclick="toggleCart()"></div>
+    <div id="cart-sidebar" class="fixed top-0 right-0 w-full md:w-[400px] h-full bg-white z-50 transform translate-x-full shadow-2xl flex flex-col transition-transform duration-300">
+        <!-- Cart Header -->
+        <div class="px-6 py-5 border-b border-brand-sand flex justify-between items-center bg-brand-light">
+            <h2 class="font-serif text-2xl font-semibold text-brand-dark">Your Order</h2>
+            <button onclick="toggleCart()" class="text-brand-dark hover:text-brand-accent transition-colors text-xl w-8 h-8 flex items-center justify-center rounded-full bg-white shadow-sm cursor-pointer">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <!-- Cart Items -->
+        <div id="cart-items" class="flex-1 overflow-y-auto p-6 space-y-4 bg-white">
+            <!-- Dynamic Cart Content injected by JS -->
+        </div>
+
+        <!-- Cart Footer -->
+        <div class="p-6 border-t border-brand-sand bg-brand-light">
+            <div class="flex justify-between items-center mb-6">
+                <span class="text-brand-dark/70 font-medium uppercase tracking-widest text-sm">Total</span>
+                <span id="cart-total" class="font-serif text-2xl font-bold text-brand-dark">$0.00</span>
+            </div>
+            <button onclick="checkout()" id="checkout-btn" class="w-full bg-brand-dark text-white py-4 rounded-full font-semibold uppercase tracking-widest text-sm hover:bg-brand-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg flex items-center justify-center gap-2 cursor-pointer" disabled>
+                <i class="fas fa-lock text-xs"></i> Secure Checkout
+            </button>
+        </div>
+    </div>
+
+    <!-- Hero Section -->
+    <header class="hero-bg h-screen w-full flex items-center justify-center text-center px-4 relative">
+        <div class="reveal active flex flex-col items-center max-w-4xl mx-auto mt-16">
+            <span class="text-brand-accent uppercase tracking-[0.3em] text-sm md:text-base mb-4 font-semibold bg-brand-dark/50 px-5 py-2 rounded-full backdrop-blur-md border border-white/10">74 Palace St, Petersham</span>
+            <h1 class="font-serif text-5xl md:text-7xl lg:text-8xl text-white font-bold mb-6 leading-tight drop-shadow-2xl">
+                Brothers Ben <br><span class="italic font-light text-brand-light">Cafe</span>
+            </h1>
+            <p class="text-brand-light font-light text-lg md:text-xl max-w-2xl mx-auto mb-10 drop-shadow-md">
+                Your local sanctuary in the Inner West. Exceptional coffee, honest food, and a vibe that feels exactly like home.
+            </p>
+            <div class="flex flex-col sm:flex-row gap-5 w-full sm:w-auto">
+                <a href="#order" class="bg-brand-accent text-white px-8 py-4 uppercase tracking-widest text-sm font-semibold rounded-full hover:bg-white hover:text-brand-dark transition-all duration-300 shadow-[0_0_20px_rgba(201,106,74,0.4)] flex items-center justify-center gap-2">
+                    <i class="fas fa-utensils"></i> View Menu
+                </a>
+                <a href="#reservations" class="bg-transparent border border-white/50 text-white px-8 py-4 uppercase tracking-widest text-sm font-semibold rounded-full hover:bg-white hover:text-brand-dark transition-all duration-300 backdrop-blur-sm flex items-center justify-center gap-2">
+                    <i class="far fa-calendar-alt"></i> Book Table
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- About Section -->
+    <section id="about" class="py-24 px-6 lg:px-12 max-w-7xl mx-auto">
+        <div class="grid lg:grid-cols-2 gap-16 items-center">
+            <div class="reveal relative">
+                <div class="absolute -top-6 -left-6 w-3/4 h-full bg-brand-sand rounded-3xl z-0"></div>
+                <img src="https://images.unsplash.com/photo-1498804103079-a6351b050096?auto=format&fit=crop&w=800&q=80" alt="Barista making coffee" class="relative z-10 w-full rounded-3xl shadow-2xl object-cover h-[550px]">
+                <div class="absolute -bottom-8 -right-8 bg-brand-dark text-brand-light p-8 rounded-3xl shadow-2xl z-20 max-w-[260px] hidden sm:block border border-white/10">
+                    <p class="font-serif text-4xl text-brand-accent mb-2">Passion.</p>
+                    <p class="font-bold text-lg uppercase tracking-widest">In Every Cup</p>
+                    <p class="text-sm text-brand-light/70 mt-3 leading-relaxed">Serving the Petersham community since day one.</p>
+                </div>
+            </div>
+            
+            <div class="reveal lg:pl-10">
+                <h4 class="text-brand-accent uppercase tracking-widest text-sm font-bold mb-4 flex items-center gap-4">
+                    <span class="w-10 h-px bg-brand-accent"></span> Our Story
+                </h4>
+                <h2 class="font-serif text-4xl md:text-5xl mb-8 text-brand-dark leading-tight">More than just <br>a local cafe.</h2>
+                <p class="text-brand-dark/70 text-lg leading-relaxed mb-6 font-light">
+                    Nestled on Palace Street, Brothers Ben Cafe was born from a simple idea: to create a space where the Petersham community can gather, connect, and enjoy truly exceptional food and coffee.
+                </p>
+                <p class="text-brand-dark/70 text-lg leading-relaxed mb-10 font-light">
+                    We believe in sourcing locally, preparing with absolute care, and serving with a genuine smile. Whether you're grabbing your morning espresso on the go, or settling in for a long weekend brunch, our doors are open.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Online Menu Section -->
+    <section id="order" class="py-24 bg-brand-dark text-brand-light px-6 lg:px-12 relative overflow-hidden">
+        <div class="max-w-7xl mx-auto relative z-10">
+            <div class="text-center reveal mb-16">
+                <h4 class="text-brand-accent uppercase tracking-widest text-sm font-bold mb-3">Freshly Prepared</h4>
+                <h2 class="font-serif text-4xl md:text-5xl mb-6">Our Menu</h2>
+                <p class="text-brand-light/70 max-w-2xl mx-auto font-light text-lg">Order ahead for pickup or browse what's cooking today.</p>
+            </div>
+
+            <!-- Menu Filter Tabs -->
+            <div class="flex flex-wrap justify-center gap-3 mb-16 reveal" id="menu-tabs-container">
+                <button onclick="filterMenu('all', this)" class="menu-tab active-tab px-8 py-3 rounded-full text-sm uppercase tracking-widest font-semibold transition-all">All</button>
+                <button onclick="filterMenu('coffee', this)" class="menu-tab inactive-tab px-8 py-3 rounded-full text-sm uppercase tracking-widest font-semibold transition-all">Coffee</button>
+                <button onclick="filterMenu('food', this)" class="menu-tab inactive-tab px-8 py-3 rounded-full text-sm uppercase tracking-widest font-semibold transition-all">Food</button>
+                <button onclick="filterMenu('sweets', this)" class="menu-tab inactive-tab px-8 py-3 rounded-full text-sm uppercase tracking-widest font-semibold transition-all">Sweets</button>
+            </div>
+
+            <!-- Menu Grid -->
+            <div id="menu-grid" class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                
+                <!-- Food Item -->
+                <div class="menu-item bg-[#1f2a24] border border-white/5 rounded-3xl overflow-hidden reveal group shadow-xl" data-category="food">
+                    <div class="h-56 overflow-hidden relative">
+                        <img src="https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=800&q=80" alt="Smashed Avo" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700">
+                    </div>
+                    <div class="p-8">
+                        <div class="flex justify-between items-start mb-3">
+                            <h3 class="font-serif text-2xl font-semibold">Smashed Avo</h3>
+                            <span class="text-brand-accent font-semibold text-xl">$18</span>
+                        </div>
+                        <p class="text-brand-light/60 text-sm mb-8 font-light leading-relaxed">Sourdough, whipped feta, heirloom tomatoes, house dukkah, poached egg.</p>
+                        <button onclick="addToCart('item-1', 'Smashed Avo', 18, 'https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=200&q=80')" class="w-full py-4 rounded-full bg-white text-brand-dark font-bold uppercase tracking-widest text-xs hover:bg-brand-accent hover:text-white transition-colors flex items-center justify-center gap-2 cursor-pointer">
+                            <i class="fas fa-plus"></i> Add to Order
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Food Item -->
+                <div class="menu-item bg-[#1f2a24] border border-white/5 rounded-3xl overflow-hidden reveal group shadow-xl" data-category="food">
+                    <div class="h-56 overflow-hidden">
+                        <img src="https://images.unsplash.com/photo-1620916566398-39f1143ab7be?auto=format&fit=crop&w=800&q=80" alt="B&E Roll" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700">
+                    </div>
+                    <div class="p-8">
+                        <div class="flex justify-between items-start mb-3">
+                            <h3 class="font-serif text-2xl font-semibold">Ben's B&E Roll</h3>
+                            <span class="text-brand-accent font-semibold text-xl">$14</span>
+                        </div>
+                        <p class="text-brand-light/60 text-sm mb-8 font-light leading-relaxed">Crispy thick-cut bacon, fried free-range egg, hash brown, house BBQ sauce.</p>
+                        <button onclick="addToCart('item-2', 'Ben\'s B&E Roll', 14, 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?auto=format&fit=crop&w=200&q=80')" class="w-full py-4 rounded-full bg-white text-brand-dark font-bold uppercase tracking-widest text-xs hover:bg-brand-accent hover:text-white transition-colors flex items-center justify-center gap-2 cursor-pointer">
+                            <i class="fas fa-plus"></i> Add to Order
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Coffee Item -->
+                <div class="menu-item bg-[#1f2a24] border border-white/5 rounded-3xl overflow-hidden reveal group shadow-xl" data-category="coffee">
+                    <div class="h-56 overflow-hidden relative">
+                        <span class="absolute top-5 left-5 bg-brand-accent text-white text-[10px] uppercase tracking-widest font-bold px-4 py-1.5 rounded-full z-10 shadow-lg">House Favorite</span>
+                        <img src="https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=800&q=80" alt="Flat White" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700">
+                    </div>
+                    <div class="p-8">
+                        <div class="flex justify-between items-start mb-3">
+                            <h3 class="font-serif text-2xl font-semibold">House Flat White</h3>
+                            <span class="text-brand-accent font-semibold text-xl">$5.50</span>
+                        </div>
+                        <p class="text-brand-light/60 text-sm mb-8 font-light leading-relaxed">Our signature blend roasted locally, perfectly textured velvety milk.</p>
+                        <button onclick="addToCart('item-3', 'House Flat White', 5.50, 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=200&q=80')" class="w-full py-4 rounded-full bg-white text-brand-dark font-bold uppercase tracking-widest text-xs hover:bg-brand-accent hover:text-white transition-colors flex items-center justify-center gap-2 cursor-pointer">
+                            <i class="fas fa-plus"></i> Add to Order
+                        </button>
+                    </div>
+                </div>
+
+                 <!-- Sweets Item -->
+                 <div class="menu-item bg-[#1f2a24] border border-white/5 rounded-3xl overflow-hidden reveal group shadow-xl" data-category="sweets">
+                    <div class="h-56 overflow-hidden">
+                        <img src="https://images.unsplash.com/photo-1528207776546-365bb710ee93?auto=format&fit=crop&w=800&q=80" alt="Hotcakes" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700">
+                    </div>
+                    <div class="p-8">
+                        <div class="flex justify-between items-start mb-3">
+                            <h3 class="font-serif text-2xl font-semibold">Ricotta Hotcakes</h3>
+                            <span class="text-brand-accent font-semibold text-xl">$21</span>
+                        </div>
+                        <p class="text-brand-light/60 text-sm mb-8 font-light leading-relaxed">Fluffy hotcakes, seasonal berries, Canadian maple syrup, house mascarpone.</p>
+                        <button onclick="addToCart('item-4', 'Ricotta Hotcakes', 21, 'https://images.unsplash.com/photo-1528207776546-365bb710ee93?auto=format&fit=crop&w=200&q=80')" class="w-full py-4 rounded-full bg-white text-brand-dark font-bold uppercase tracking-widest text-xs hover:bg-brand-accent hover:text-white transition-colors flex items-center justify-center gap-2 cursor-pointer">
+                            <i class="fas fa-plus"></i> Add to Order
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Gallery Section -->
+    <section id="gallery" class="py-24 bg-brand-light px-6 lg:px-12">
+        <div class="max-w-7xl mx-auto text-center reveal mb-16">
+            <h4 class="text-brand-accent uppercase tracking-widest text-sm font-bold mb-3">The Atmosphere</h4>
+            <h2 class="font-serif text-4xl md:text-5xl text-brand-dark">Life at the Cafe</h2>
+        </div>
+        <div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <img src="https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=800&q=80" class="w-full h-64 object-cover rounded-2xl reveal hover:opacity-90 transition-opacity" alt="Coffee pouring">
+            <img src="https://images.unsplash.com/photo-1497935586351-b67a49e012bf?auto=format&fit=crop&w=800&q=80" class="w-full h-64 object-cover rounded-2xl reveal hover:opacity-90 transition-opacity" alt="Coffee beans">
+            <img src="https://images.unsplash.com/photo-1600093463592-8e36ae95ef56?auto=format&fit=crop&w=800&q=80" class="w-full h-64 object-cover rounded-2xl reveal hover:opacity-90 transition-opacity md:col-span-2 lg:col-span-2" alt="Cafe exterior">
+        </div>
+    </section>
+
+    <!-- Reservation Section -->
+    <section id="reservations" class="py-24 bg-brand-sand px-6 lg:px-12">
+        <div class="max-w-3xl mx-auto bg-white rounded-3xl shadow-xl overflow-hidden reveal">
+            <div class="bg-brand-dark text-brand-light p-10 text-center">
+                <h2 class="font-serif text-4xl mb-2">Reserve a Table</h2>
+                <p class="font-light text-white/70">Join us at 74 Palace St, Petersham</p>
+            </div>
+            <form id="reservation-form" class="p-10 space-y-6">
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-bold text-brand-dark uppercase tracking-widest mb-2">Name</label>
+                        <input type="text" required class="w-full bg-brand-light border border-brand-sand rounded-xl px-4 py-3 focus:outline-none focus:border-brand-accent transition-colors">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-brand-dark uppercase tracking-widest mb-2">Email</label>
+                        <input type="email" required class="w-full bg-brand-light border border-brand-sand rounded-xl px-4 py-3 focus:outline-none focus:border-brand-accent transition-colors">
+                    </div>
+                </div>
+                <div class="grid md:grid-cols-3 gap-6">
+                    <div>
+                        <label class="block text-sm font-bold text-brand-dark uppercase tracking-widest mb-2">Date</label>
+                        <input type="date" required class="w-full bg-brand-light border border-brand-sand rounded-xl px-4 py-3 focus:outline-none focus:border-brand-accent transition-colors">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-brand-dark uppercase tracking-widest mb-2">Time</label>
+                        <input type="time" required class="w-full bg-brand-light border border-brand-sand rounded-xl px-4 py-3 focus:outline-none focus:border-brand-accent transition-colors">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-brand-dark uppercase tracking-widest mb-2">Guests</label>
+                        <select class="w-full bg-brand-light border border-brand-sand rounded-xl px-4 py-3 focus:outline-none focus:border-brand-accent transition-colors">
+                            <option>1 Person</option>
+                            <option>2 People</option>
+                            <option>3 People</option>
+                            <option>4 People</option>
+                            <option>5+ People</option>
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" class="w-full bg-brand-accent text-white font-bold uppercase tracking-widest py-4 rounded-xl hover:bg-brand-dark transition-colors mt-4 cursor-pointer">
+                    Confirm Reservation
+                </button>
+            </form>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer id="contact" class="bg-brand-dark text-white pt-20 pb-10 px-6 lg:px-12 border-t border-white/10">
+        <div class="max-w-7xl mx-auto grid md:grid-cols-3 gap-12 mb-16">
+            <div>
+                <a href="#" class="font-serif text-3xl font-bold tracking-wide flex items-center gap-2 mb-6">
+                    Brothers Ben <span class="text-brand-accent text-4xl leading-none">.</span>
+                </a>
+                <p class="text-white/60 font-light mb-6">Your local sanctuary in the Inner West. Exceptional coffee, honest food, and a vibe that feels exactly like home.</p>
+                <div class="flex gap-4">
+                    <a href="#" class="w-10 h-10 rounded-full border border-white/20 flex items-center justify-center hover:bg-brand-accent hover:border-brand-accent transition-colors"><i class="fab fa-facebook-f"></i></a>
+                    <a href="#" class="w-10 h-10 rounded-full border border-white/20 flex items-center justify-center hover:bg-brand-accent hover:border-brand-accent transition-colors"><i class="fab fa-instagram"></i></a>
+                </div>
+            </div>
+            <div>
+                <h4 class="font-bold uppercase tracking-widest mb-6">Visit Us</h4>
+                <p class="text-white/70 font-light mb-2"><i class="fas fa-map-marker-alt text-brand-accent mr-3"></i> 74 Palace St, Petersham, NSW 2049</p>
+                <p class="text-white/70 font-light mb-2"><i class="fas fa-envelope text-brand-accent mr-3"></i> hello@brothersbencafe.com</p>
+                <p class="text-white/70 font-light"><i class="fas fa-phone text-brand-accent mr-3"></i> (02) 9000 0000</p>
+            </div>
+            <div>
+                <h4 class="font-bold uppercase tracking-widest mb-6">Hours</h4>
+                <ul class="space-y-2 text-white/70 font-light">
+                    <li class="flex justify-between border-b border-white/10 pb-2"><span>Mon - Fri</span> <span>6:30am - 3:00pm</span></li>
+                    <li class="flex justify-between border-b border-white/10 pb-2"><span>Saturday</span> <span>7:00am - 3:00pm</span></li>
+                    <li class="flex justify-between pb-2"><span>Sunday</span> <span>7:30am - 2:00pm</span></li>
+                </ul>
+            </div>
+        </div>
+        <div class="max-w-7xl mx-auto text-center text-white/40 text-sm font-light pt-8 border-t border-white/10">
+            &copy; 2024 Brothers Ben Cafe. All rights reserved.
+        </div>
+    </footer>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // --- 1. UI Interactions (Menu & Scroll) ---
+        function toggleMenu() {
+            const menu = document.getElementById('mobile-menu');
+            menu.classList.toggle('hidden');
+            menu.classList.toggle('flex');
+        }
+
+        // Scroll Reveal
+        function reveal() {
+            const reveals = document.querySelectorAll(".reveal");
+            for (let i = 0; i < reveals.length; i++) {
+                const windowHeight = window.innerHeight;
+                const elementTop = reveals[i].getBoundingClientRect().top;
+                const elementVisible = 100;
+                if (elementTop < windowHeight - elementVisible) {
+                    reveals[i].classList.add("active");
+                }
+            }
+        }
+        window.addEventListener("scroll", reveal);
+        reveal(); // Trigger on load
+
+        // --- 2. Custom Toast System ---
+        function showToast(message, iconClass = 'fa-check-circle') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'custom-toast';
+            toast.innerHTML = `<i class="fas ${iconClass} text-brand-accent text-lg"></i> <span>${message}</span>`;
+            
+            container.appendChild(toast);
+            
+            // Trigger animation
+            setTimeout(() => toast.classList.add('show'), 10);
+            
+            // Remove after 3 seconds
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 400);
+            }, 3000);
+        }
+
+        // --- 3. Menu Filtering ---
+        function filterMenu(category, clickedBtn) {
+            // Update Active Tab Styles
+            const tabs = document.querySelectorAll('.menu-tab');
+            tabs.forEach(tab => {
+                tab.classList.remove('active-tab');
+                tab.classList.add('inactive-tab');
+            });
+            clickedBtn.classList.remove('inactive-tab');
+            clickedBtn.classList.add('active-tab');
+
+            // Filter Items
+            const items = document.querySelectorAll('.menu-item');
+            items.forEach(item => {
+                if (category === 'all' || item.getAttribute('data-category') === category) {
+                    item.classList.remove('hidden');
+                    // Small delay to allow CSS transition to play on reveal
+                    setTimeout(() => item.classList.add('active'), 50); 
+                } else {
+                    item.classList.add('hidden');
+                    item.classList.remove('active');
+                }
+            });
+        }
+
+        // --- 4. Shopping Cart System ---
+        let cart = [];
+
+        function toggleCart() {
+            const sidebar = document.getElementById('cart-sidebar');
+            const overlay = document.getElementById('cart-overlay');
+            
+            if (sidebar.classList.contains('translate-x-full')) {
+                sidebar.classList.remove('translate-x-full');
+                overlay.classList.remove('hidden');
+                setTimeout(() => overlay.classList.remove('opacity-0'), 10);
+            } else {
+                sidebar.classList.add('translate-x-full');
+                overlay.classList.add('opacity-0');
+                setTimeout(() => overlay.classList.add('hidden'), 400);
+            }
+        }
+
+        function addToCart(id, name, price, imgUrl) {
+            const existingItem = cart.find(item => item.id === id);
+            
+            if (existingItem) {
+                existingItem.quantity += 1;
+            } else {
+                cart.push({ id, name, price, quantity: 1, imgUrl });
+            }
+            
+            updateCartUI();
+            showToast(`${name} added to cart!`);
+        }
+
+        function removeFromCart(id) {
+            cart = cart.filter(item => item.id !== id);
+            updateCartUI();
+        }
+
+        function updateQuantity(id, change) {
+            const item = cart.find(item => item.id === id);
+            if (item) {
+                item.quantity += change;
+                if (item.quantity <= 0) {
+                    removeFromCart(id);
+                } else {
+                    updateCartUI();
+                }
+            }
+        }
+
+        function updateCartUI() {
+            const cartItemsContainer = document.getElementById('cart-items');
+            const cartTotal = document.getElementById('cart-total');
+            const checkoutBtn = document.getElementById('checkout-btn');
+            
+            // Badges
+            const badgeDesktop = document.getElementById('cart-badge');
+            const badgeMobile = document.getElementById('mobile-cart-badge');
+            
+            let totalItems = 0;
+            let totalPrice = 0;
+
+            cartItemsContainer.innerHTML = ''; // Clear current
+
+            if (cart.length === 0) {
+                cartItemsContainer.innerHTML = `
+                    <div class="h-full flex flex-col items-center justify-center text-brand-dark/50 pt-10">
+                        <i class="fas fa-shopping-basket text-4xl mb-4 text-brand-sand"></i>
+                        <p class="font-medium">Your cart is empty.</p>
+                        <p class="text-sm mt-2">Add some delicious items from our menu!</p>
+                    </div>
+                `;
+                checkoutBtn.disabled = true;
+                badgeDesktop.classList.add('opacity-0');
+                badgeMobile.classList.add('opacity-0');
+            } else {
+                cart.forEach(item => {
+                    totalItems += item.quantity;
+                    totalPrice += (item.price * item.quantity);
+                    
+                    const itemEl = document.createElement('div');
+                    itemEl.className = 'flex gap-4 items-center bg-brand-light p-3 rounded-xl border border-brand-sand';
+                    itemEl.innerHTML = `
+                        <img src="${item.imgUrl}" class="w-16 h-16 object-cover rounded-lg">
+                        <div class="flex-1">
+                            <h4 class="font-serif font-bold text-brand-dark">${item.name}</h4>
+                            <p class="text-brand-accent font-semibold text-sm">$${item.price.toFixed(2)}</p>
+                        </div>
+                        <div class="flex items-center gap-2 bg-white px-2 py-1 rounded-lg border border-brand-sand">
+                            <button onclick="updateQuantity('${item.id}', -1)" class="w-6 h-6 flex items-center justify-center text-brand-dark/50 hover:text-brand-accent cursor-pointer"><i class="fas fa-minus text-xs"></i></button>
+                            <span class="font-bold text-sm w-4 text-center">${item.quantity}</span>
+                            <button onclick="updateQuantity('${item.id}', 1)" class="w-6 h-6 flex items-center justify-center text-brand-dark/50 hover:text-brand-accent cursor-pointer"><i class="fas fa-plus text-xs"></i></button>
+                        </div>
+                    `;
+                    cartItemsContainer.appendChild(itemEl);
+                });
+                
+                checkoutBtn.disabled = false;
+                
+                // Update Badges
+                badgeDesktop.textContent = totalItems;
+                badgeMobile.textContent = totalItems;
+                badgeDesktop.classList.remove('opacity-0');
+                badgeMobile.classList.remove('opacity-0');
+            }
+            
+            cartTotal.textContent = `$${totalPrice.toFixed(2)}`;
+        }
+
+        function checkout() {
+            if(cart.length === 0) return;
+            
+            // Clear cart logic
+            cart = [];
+            updateCartUI();
+            toggleCart();
+            
+            // Show Success Notification
+            showToast('Order placed successfully! We will prepare it shortly.', 'fa-check-circle');
+        }
+
+        // --- 5. Reservation Form Submit ---
+        document.getElementById('reservation-form').addEventListener('submit', function(e) {
+            e.preventDefault(); // Prevent page reload
+            showToast('Table booked successfully! See you soon.', 'fa-calendar-check');
+            this.reset(); // Clear form fields
+        });
+
+    </script>
+</body>
+</html>
